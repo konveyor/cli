@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/konveyor/cli/lib"
+	"github.com/konveyor/cli/types"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -46,7 +47,7 @@ func GetPluginListSubCommand() *cobra.Command {
 		Short: "List all available plugin files on a user's PATH.",
 		Long: `List all available plugin files on a user's PATH.
 
-		Available plugin files are those that are: - executable - anywhere on the user's PATH - begin with "kubectl-"
+		Available plugin files are those that are: - executable - anywhere on the user's PATH - begin with "` + types.ValidPluginFilenamePrefix + `"
 `,
 		Run: func(cmd *cobra.Command, args []string) {
 			logrus.Debug("command plugin list called")
