@@ -17,41 +17,52 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"runtime"
 	"strings"
 	"syscall"
 
 	"github.com/konveyor/cli/types"
 	"github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
 )
 
-func Execute() {
+func Execute() error {
 	rootCmd := GetRootCommand()
-	cmd, _, err := rootCmd.Find(os.Args[1:])
-	if err == nil && cmd != nil {
-		if err := rootCmd.Execute(); err != nil {
-			logrus.Fatalf("Error: %q", err)
-		}
-		return
+	if cmd, _, err := rootCmd.Find(os.Args[1:]); err == nil && cmd != nil {
+		return rootCmd.Execute()
 	}
 
-	// default cmd if no cmd is given
+	cmdName := "" // first "non-flag" arguments
+	rest := []string{}
+	for i, arg := range os.Args[1:] {
+		if !strings.HasPrefix(arg, "-") {
+			cmdName = arg
+			rest = os.Args[1+i+1:]
+			break
+		}
+	}
+
+	if cmdName == "" || cmdName == "help" || cmdName == "completion" || cmdName == cobra.ShellCompRequestCmd || cmdName == cobra.ShellCompNoDescRequestCmd {
+		return rootCmd.Execute()
+	}
+
+	// search for a plugin if no command is found
+
 	logrus.Debugf("Did not find a valid sub command given the args: %+v", os.Args)
-	if len(os.Args) < 2 || strings.HasPrefix(os.Args[1], "-") {
-		logrus.Fatalf("Invalid args. Try konveyor --help")
-	}
-	pluginCmd := exec.Command(types.ValidPluginFilenamePrefix + os.Args[1])
+	pluginCmd := exec.Command(types.ValidPluginFilenamePrefix + cmdName)
 	logrus.Debugf("pluginCmd: %#v", pluginCmd)
-	if pluginCmd.Path == "" {
-		logrus.Debugf("the path to the plugin executable is empty")
-		return
+	if !path.IsAbs(pluginCmd.Path) {
+		return fmt.Errorf("unknown command '%s'", cmdName)
 	}
-	logrus.Infof("Executing the plugin: %s with the args: %+v", pluginCmd.Path, os.Args[2:])
-	if err := ExecutePlugin(pluginCmd.Path, os.Args[2:], nil); err != nil {
-		logrus.Fatalf("the plugin failed to run or did not exit properly. Error: %q", err)
+	logrus.Infof("Executing the plugin '%s' with the args: %+v", pluginCmd.Path, rest)
+	if err := ExecutePlugin(pluginCmd.Path, rest, os.Environ()); err != nil {
+		return fmt.Errorf("the plugin failed to run or did not exit properly. Error: %q", err)
 	}
+	return nil
 }
 
 // ExecutePlugin executes a plugin given the path to the binary, args and environment variables
