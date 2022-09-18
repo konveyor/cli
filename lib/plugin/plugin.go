@@ -14,7 +14,7 @@
  *  limitations under the License.
  */
 
-package lib
+package plugin
 
 import (
 	"fmt"
@@ -23,25 +23,25 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/konveyor/cli/types"
+	"github.com/konveyor/cli/lib/cache"
+	"github.com/konveyor/cli/lib/common"
+	"github.com/konveyor/cli/lib/types"
 	"github.com/sirupsen/logrus"
 )
 
-func isExecutable(mode os.FileMode) bool {
-	return mode&0111 != 0
-}
+func isExecutable(mode os.FileMode) bool { return mode&0111 != 0 }
 
 func getKonveyorCommands() []string { return []string{"plugin", "version"} }
 
 // getUniquePaths deduplicates the given paths.
 func getUniquePaths(paths []string) []string {
-	trimmedPaths := apply(strings.TrimSpace, paths)
-	filteredPaths := filter(func(s string) bool { return len(s) > 0 }, trimmedPaths)
+	trimmedPaths := common.Apply(strings.TrimSpace, paths)
+	filteredPaths := common.Filter(func(s string) bool { return len(s) > 0 }, trimmedPaths)
 	realPaths := []string{}
 	for _, filteredPath := range filteredPaths {
 		realPath, err := filepath.EvalSymlinks(filteredPath)
 		if err != nil {
-			logrus.Errorf("failed to resolve the path %s . Error: %q", filteredPath, err)
+			logrus.Debugf("failed to resolve the path %s . Error: %q", filteredPath, err)
 			continue
 		}
 		realPaths = append(realPaths, realPath)
@@ -59,14 +59,54 @@ func getUniquePaths(paths []string) []string {
 }
 
 // GetPluginsList looks for plugins in the given paths.
-func GetPluginsList(paths []string, nameOnly bool) ([]string, error) {
+func GetPluginsList(nameOnly bool) ([]string, error) {
+	pluginPaths1, err := GetPluginsListFromLocalCache(nameOnly)
+	if err != nil {
+		return nil, err
+	}
+	pluginPaths2, err := GetPluginsListFromPath(nameOnly)
+	if err != nil {
+		return nil, err
+	}
+	return append(pluginPaths1, pluginPaths2...), nil
+}
+
+// GetPluginsListFromLocalCache gets all the plugins in the storage directory.
+func GetPluginsListFromLocalCache(nameOnly bool) ([]string, error) {
+	localCache, err := cache.GetLocalCache()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the local cache. Error: %q", err)
+	}
+	if len(localCache.Spec.Installed) == 0 {
+		return nil, nil
+	}
+	if nameOnly {
+		pluginNames := common.Apply(func(p types.InstalledPlugin) string { return p.Name }, localCache.Spec.Installed)
+		return pluginNames, nil
+	}
+	pluginPaths := []string{}
+	for _, installed := range localCache.Spec.Installed {
+		pluginPaths = append(pluginPaths, GetPluginBinPath(installed))
+	}
+	return pluginPaths, nil
+}
+
+// GetPluginBinPath returns the path to the plugin's entrypoint.
+func GetPluginBinPath(installed types.InstalledPlugin) string {
+	return filepath.Join(common.GetPluginDir(installed.Name), installed.Version, installed.Platform, installed.Bin)
+}
+
+// GetPluginsListFromPath get all the plugins with a valid prefix that are on the PATH.
+func GetPluginsListFromPath(nameOnly bool) ([]string, error) {
+	envPath := os.Getenv("PATH")
+	logrus.Debug("envPath", envPath)
+	paths := filepath.SplitList(envPath)
+	logrus.Debug("paths", paths)
 	if len(paths) == 0 {
 		return nil, fmt.Errorf("the list of directories is empty")
 	}
-
 	pluginPaths := []string{}
 	konveyorCmds := getKonveyorCommands()
-
 	seen := map[string]bool{}
 	for _, dir := range getUniquePaths(paths) {
 		files, err := ioutil.ReadDir(dir)
@@ -80,7 +120,7 @@ func GetPluginsList(paths []string, nameOnly bool) ([]string, error) {
 				continue
 			}
 			pluginName := f.Name()
-			if !strings.HasPrefix(pluginName, types.ValidPluginFilenamePrefix) {
+			if !strings.HasPrefix(pluginName, types.VALID_PLUGIN_FILENAME_PREFIX) {
 				continue
 			}
 			if _, ok := seen[pluginName]; ok {
@@ -90,7 +130,7 @@ func GetPluginsList(paths []string, nameOnly bool) ([]string, error) {
 			seen[pluginName] = true
 			if !isExecutable(f.Mode()) {
 				logrus.Warnf("A file named '%s' was found in the directory %s but it is not executable", pluginName, dir)
-			} else if contains(pluginName, konveyorCmds) {
+			} else if common.Contains(pluginName, konveyorCmds) {
 				logrus.Warnf("The plugin '%s' has the same name as a built-in command of konveyor", pluginName)
 			}
 			if nameOnly {
@@ -101,12 +141,4 @@ func GetPluginsList(paths []string, nameOnly bool) ([]string, error) {
 		}
 	}
 	return pluginPaths, nil
-}
-
-func GetPluginsFromPath(nameOnly bool) ([]string, error) {
-	envPath := os.Getenv("PATH")
-	logrus.Debug("envPath", envPath)
-	paths := filepath.SplitList(envPath)
-	logrus.Debug("paths", paths)
-	return GetPluginsList(paths, nameOnly)
 }
