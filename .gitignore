@@ -22,3 +22,4 @@ go.work
 
 /bin/
 /_dist/
+/coverage.txt
