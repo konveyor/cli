@@ -1,0 +1,15 @@
+apiVersion: cli.konveyor.io/v1alpha1
+kind: Plugin
+metadata:
+  name: tackle-test-generator-cli
+spec:
+  homePage: https://github.com/konveyor/tackle-test-generator-cli
+  description: |
+    TackleTest-Unit (supported by the CLI command tkltest-unit) automatically generates unit-level test cases for Java applications.
+    TackleTest-UI (supported by the CLI command tkltest-ui), automatically generates end-to-end test cases for web applications that
+    exercise the application under test via its user interface.
+  versions:
+    - version: v2.3.0
+      platforms:
+        - uri: https://github.com/konveyor/tackle-test-generator-cli/releases/download/v2.3.0/tackle-test-generator-cli-v2.3.0-all-deps.tgz
+          bin: tackle-test-generator-cli/entrypoint.sh

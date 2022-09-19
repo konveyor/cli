@@ -20,16 +20,20 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"syscall"
 
-	"github.com/konveyor/cli/types"
+	"github.com/konveyor/cli/lib/cache"
+	"github.com/konveyor/cli/lib/common"
+	"github.com/konveyor/cli/lib/plugin"
+	"github.com/konveyor/cli/lib/types"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
+// Execute is the start of the flow. It finds an executes the appropriate command based on the args.
 func Execute() error {
 	rootCmd := GetRootCommand()
 	if cmd, _, err := rootCmd.Find(os.Args[1:]); err == nil && cmd != nil {
@@ -50,16 +54,35 @@ func Execute() error {
 		return rootCmd.Execute()
 	}
 
-	// search for a plugin if no command is found
+	// Search for a plugin if no command is found.
 
-	logrus.Debugf("Did not find a valid sub command given the args: %+v", os.Args)
-	pluginCmd := exec.Command(types.ValidPluginFilenamePrefix + cmdName)
-	logrus.Debugf("pluginCmd: %#v", pluginCmd)
-	if !path.IsAbs(pluginCmd.Path) {
+	// Look in the local cache.
+	localCache, err := cache.GetLocalCache()
+	if err != nil {
+		return fmt.Errorf("failed to get the local cache. Error: %q", err)
+	}
+	pluginPath := ""
+	if len(localCache.Spec.Installed) > 0 {
+		idx := common.FindIndex(func(p types.InstalledPlugin) bool { return p.Name == cmdName }, localCache.Spec.Installed)
+		if idx != -1 {
+			pluginPath = plugin.GetPluginBinPath(localCache.Spec.Installed[idx])
+		} else {
+			// Look in the PATH.
+			pluginPaths, err := plugin.GetPluginsListFromPath(false)
+			if err != nil {
+				return fmt.Errorf("failed to get the list of plugins from the PATH. Error: %q", err)
+			}
+			idx := common.FindIndex(func(p string) bool { return filepath.Base(p) == types.VALID_PLUGIN_FILENAME_PREFIX+cmdName }, pluginPaths)
+			if idx != -1 {
+				pluginPath = pluginPaths[idx]
+			}
+		}
+	}
+	if pluginPath == "" {
 		return fmt.Errorf("unknown command '%s'", cmdName)
 	}
-	logrus.Infof("Executing the plugin '%s' with the args: %+v", pluginCmd.Path, rest)
-	if err := ExecutePlugin(pluginCmd.Path, rest, os.Environ()); err != nil {
+	logrus.Infof("Executing the plugin '%s' with the args: %+v", pluginPath, rest)
+	if err := ExecutePlugin(pluginPath, rest, os.Environ()); err != nil {
 		return fmt.Errorf("the plugin failed to run or did not exit properly. Error: %q", err)
 	}
 	return nil
@@ -67,10 +90,9 @@ func Execute() error {
 
 // ExecutePlugin executes a plugin given the path to the binary, args and environment variables
 func ExecutePlugin(executablePath string, cmdArgs, environment []string) error {
-
 	// Windows does not support exec syscall.
 	if runtime.GOOS == "windows" {
-		cmd := exec.Command(executablePath, cmdArgs...)
+		cmd := Command(executablePath, cmdArgs...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
@@ -81,4 +103,26 @@ func ExecutePlugin(executablePath string, cmdArgs, environment []string) error {
 	// invoke cmd binary relaying the environment and args given
 	// append executablePath to cmdArgs, as execve will make first argument the "binary name".
 	return syscall.Exec(executablePath, append([]string{executablePath}, cmdArgs...), environment)
+}
+
+// Command executes the given command on Windows
+func Command(name string, arg ...string) *exec.Cmd {
+	cmd := &exec.Cmd{
+		Path: name,
+		Args: append([]string{name}, arg...),
+	}
+	if filepath.Base(name) == name {
+		lp, err := exec.LookPath(name)
+		if lp != "" && !shouldSkipOnLookPathErr(err) {
+			// Update cmd.Path even if err is non-nil.
+			// If err is ErrDot (especially on Windows), lp may include a resolved
+			// extension (like .exe or .bat) that should be preserved.
+			cmd.Path = lp
+		}
+	}
+	return cmd
+}
+
+func shouldSkipOnLookPathErr(err error) bool {
+	return err != nil
 }

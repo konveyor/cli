@@ -1,0 +1,42 @@
+apiVersion: cli.konveyor.io/v1alpha1
+kind: Plugin
+metadata:
+  name: move2kube
+spec:
+  homePage: https://move2kube.konveyor.io
+  docs: https://move2kube.konveyor.io/concepts
+  tutorials: https://move2kube.konveyor.io/tutorials
+  shortDescription: Move2Kube creates all the resources required for deploying your application to Kubernetes.
+  description: |
+    Move2Kube creates all resources required for deploying your application to Kubernetes, including containerisation and kubernetes resources.
+  versions:
+    - version: v0.3.4
+      platforms:
+        - selector:
+            matchLabels:
+              os: darwin
+              arch: amd64
+          uri: https://github.com/konveyor/move2kube/releases/download/v0.3.4/move2kube-v0.3.4-darwin-amd64.tar.gz
+          sha256: f58389b8116d43707ae8fb1d22dbc4ee23361f6dc7283d8d188d3723360690e8
+          bin: move2kube/move2kube
+        - selector:
+            matchLabels:
+              os: darwin
+              arch: arm64
+          uri: https://github.com/konveyor/move2kube/releases/download/v0.3.4/move2kube-v0.3.4-darwin-arm64.tar.gz
+          sha256: b54e5b685035a14b588111058c7d238be094d6527a5b7ff7ff2bd3d381245bf5
+          bin: move2kube/move2kube
+        - selector:
+            matchLabels:
+              os: linux
+              arch: amd64
+          uri: https://github.com/konveyor/move2kube/releases/download/v0.3.4/move2kube-v0.3.4-linux-amd64.tar.gz
+          sha256: 250e8c5aad8e821849e5b35bff9089b531cfaa8cef27124504d02da4a256f0dc
+          bin: move2kube/move2kube
+        - selector:
+            matchLabels:
+              os: windows
+              arch: amd64
+          uri: https://github.com/konveyor/move2kube/releases/download/v0.3.4/move2kube-v0.3.4-windows-amd64.tar.gz
+          sha256: b80687e554f98bcf8f012b6c363be536245dce53a175afdbe54ac7bf9efdfa11
+          bin: move2kube/move2kube

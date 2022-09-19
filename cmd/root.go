@@ -33,16 +33,13 @@ Each tool comes as a plugin that can be installed if necessary.
 
 Try "konveyor plugin --help" for more info about plugins and their installation.
 `,
-		PersistentPreRunE: func(_ *cobra.Command, args []string) error {
+		PersistentPreRunE: func(*cobra.Command, []string) error {
 			logl, err := logrus.ParseLevel(loglevel)
 			if err != nil {
 				logrus.Errorf("the log level '%s' is invalid, using 'info' log level instead. Error: %q", loglevel, err)
 				logl = logrus.InfoLevel
 			}
 			logrus.SetLevel(logl)
-			if len(args) > 0 {
-				logrus.Infof("got the args: %+v\n", args)
-			}
 			return nil
 		},
 	}

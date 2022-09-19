@@ -19,8 +19,10 @@ package cmd
 import (
 	"strings"
 
-	"github.com/konveyor/cli/lib"
-	"github.com/konveyor/cli/types"
+	"github.com/konveyor/cli/lib/common"
+	"github.com/konveyor/cli/lib/github"
+	"github.com/konveyor/cli/lib/plugin"
+	"github.com/konveyor/cli/lib/types"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
@@ -37,31 +39,102 @@ func GetPluginCommand() *cobra.Command {
 `,
 	}
 	pluginCmd.AddCommand(GetPluginListSubCommand())
+	pluginCmd.AddCommand(GetPluginInstallCommand())
+	pluginCmd.AddCommand(GetPluginUninstallCommand())
+	pluginCmd.AddCommand(GetPluginTidyCommand())
 	return pluginCmd
 }
 
+// GetPluginListSubCommand returns a command to list all the installed plugins.
 func GetPluginListSubCommand() *cobra.Command {
 	nameOnly := false
+	remote := false
 	pluginListCmd := &cobra.Command{
 		Use:   "list",
-		Short: "List all available plugin files on a user's PATH.",
-		Long: `List all available plugin files on a user's PATH.
+		Short: "List all the installed plugins.",
+		Long: `List all the installed plugins.
 
-		Available plugin files are those that are: - executable - anywhere on the user's PATH - begin with "` + types.ValidPluginFilenamePrefix + `"
+	Installed plugins are those that are: - executable - anywhere on the user's PATH - begin with "` + types.VALID_PLUGIN_FILENAME_PREFIX + `"
+	Also includes any plugins in the ` + common.GetStorageDir() + ` directory
 `,
-		Run: func(cmd *cobra.Command, args []string) {
+		Run: func(*cobra.Command, []string) {
 			logrus.Debug("command plugin list called")
-			plugins, err := lib.GetPluginsFromPath(nameOnly)
+			if remote {
+				plugins, err := github.GetPluginsListFromGithub()
+				if err != nil {
+					logrus.Fatalf("failed to get the list of plugins from Github. Error: %q", err)
+				}
+				logrus.Infof("The following plugins are available on Github:\n%s", strings.Join(plugins, "\n"))
+				return
+			}
+			plugins, err := plugin.GetPluginsList(nameOnly)
 			if err != nil {
 				logrus.Fatalf("failed to get the list of plugins from the PATH. Error: %q", err)
 			}
 			if len(plugins) == 0 {
-				logrus.Info("No plugins were found in the PATH")
+				logrus.Info("No plugins were found.")
 				return
 			}
-			logrus.Infof("The following compatible plugins are available:\n\n%s", strings.Join(plugins, "\n"))
+			logrus.Infof("The following plugins are installed:\n%s", strings.Join(plugins, "\n"))
 		},
 	}
 	pluginListCmd.Flags().BoolVar(&nameOnly, "name-only", false, "If true, display only the binary name of each plugin, rather than its full path")
+	pluginListCmd.Flags().BoolVar(&remote, "remote", false, "If true, display only the list of plugins in the Github repo")
 	return pluginListCmd
+}
+
+// GetPluginInstallCommand returns a command to install a plugin.
+func GetPluginInstallCommand() *cobra.Command {
+	pluginInstallCmd := &cobra.Command{
+		Use:   "install",
+		Args:  cobra.MinimumNArgs(1),
+		Short: "Install a plugin",
+		Long:  "Install a plugin",
+		Run: func(_ *cobra.Command, args []string) {
+			name := args[0]
+			logrus.Infof("Looking for a plugin named '%s' on Github", name)
+			if err := plugin.InstallPluginFromGithub(name); err != nil {
+				logrus.Fatalf("failed to find or install the plugin named '%s'. Error: %q", name, err)
+			}
+			logrus.Infof("The plugin named '%s' was installed!", name)
+		},
+	}
+	return pluginInstallCmd
+}
+
+// GetPluginUninstallCommand returns a command to uninstall a plugin.
+func GetPluginUninstallCommand() *cobra.Command {
+	pluginUninstallCmd := &cobra.Command{
+		Use:   "uninstall",
+		Args:  cobra.MinimumNArgs(1),
+		Short: "Uninstall a plugin",
+		Long:  "Uninstall a plugin",
+		Run: func(_ *cobra.Command, args []string) {
+			name := args[0]
+			logrus.Infof("Looking for a plugin named '%s' among the installed plugins", name)
+			if err := plugin.UninstallPlugin(name); err != nil {
+				logrus.Fatalf("failed to find or uninstall the plugin named '%s'. Error: %q", name, err)
+			}
+			logrus.Infof("The plugin named '%s' was uninstalled!", name)
+		},
+	}
+	return pluginUninstallCmd
+}
+
+// GetPluginTidyCommand returns a command to tidy the plugins directory.
+func GetPluginTidyCommand() *cobra.Command {
+	pluginTidyCmd := &cobra.Command{
+		Use:   "tidy",
+		Args:  cobra.NoArgs,
+		Short: "Cleans the plugins directory, removing any broken plugins to ensure consistency with the local cache",
+		Long:  "Cleans the plugins directory, removing any broken plugins to ensure consistency with the local cache",
+		Run: func(*cobra.Command, []string) {
+			logrus.Infof("Looking for any inconsistencies between the local cache and the installed plugins")
+			if err := plugin.UninstallBrokenPlugins(); err != nil {
+				logrus.Fatalf("failed to uninstall all the broken plugins. Error: %q", err)
+			}
+			logrus.Infof("Tidying done!")
+		},
+	}
+	return pluginTidyCmd
 }
