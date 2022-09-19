@@ -28,11 +28,11 @@ import (
 
 const (
 	// REPO_OWNER is the username of the owner of the plugins Github repo.
-	REPO_OWNER = "HarikrishnanBalagopal"
+	REPO_OWNER = "konveyor"
 	// REPO_NAME is the name of the plugins Github repo.
 	REPO_NAME = "cli"
 	// REPO_BRANCH is the branch of the plugins Github repo where the metadata for the plugins are stored.
-	REPO_BRANCH = "feat/plugins"
+	REPO_BRANCH = "main"
 	// REPO_PLUGINS_DIR is the directory on the Github repo where the metadata for the plugins are stored.
 	REPO_PLUGINS_DIR = "plugins"
 )
