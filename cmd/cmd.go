@@ -66,21 +66,26 @@ func Execute() error {
 		idx := common.FindIndex(func(p types.InstalledPlugin) bool { return p.Name == cmdName }, localCache.Spec.Installed)
 		if idx != -1 {
 			pluginPath = plugin.GetPluginBinPath(localCache.Spec.Installed[idx])
-		} else {
-			// Look in the PATH.
-			pluginPaths, err := plugin.GetPluginsListFromPath(false)
-			if err != nil {
-				return fmt.Errorf("failed to get the list of plugins from the PATH. Error: %q", err)
-			}
-			idx := common.FindIndex(func(p string) bool { return filepath.Base(p) == types.VALID_PLUGIN_FILENAME_PREFIX+cmdName }, pluginPaths)
-			if idx != -1 {
-				pluginPath = pluginPaths[idx]
-			}
 		}
 	}
+
+	// Look in the PATH.
+	if pluginPath == "" {
+		pluginPaths, err := plugin.GetPluginsListFromPath(false)
+		if err != nil {
+			return fmt.Errorf("failed to get the list of plugins from the PATH. Error: %q", err)
+		}
+		idx := common.FindIndex(func(p string) bool { return filepath.Base(p) == types.VALID_PLUGIN_FILENAME_PREFIX+cmdName }, pluginPaths)
+		if idx != -1 {
+			pluginPath = pluginPaths[idx]
+		}
+	}
+
+	// No plugin found
 	if pluginPath == "" {
 		return fmt.Errorf("unknown command '%s'", cmdName)
 	}
+
 	logrus.Infof("Executing the plugin '%s' with the args: %+v", pluginPath, rest)
 	if err := ExecutePlugin(pluginPath, rest, os.Environ()); err != nil {
 		return fmt.Errorf("the plugin failed to run or did not exit properly. Error: %q", err)

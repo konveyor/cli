@@ -30,7 +30,7 @@ const (
 	// PLUGINS_DIR is where all the plugins are stored.
 	PLUGINS_DIR = "plugins"
 	// CACHE_FILE contains the list of installed plugins and other app specific metadata.
-	CACHE_FILE = "cache"
+	CACHE_FILE = "cache.yaml"
 	// API_VERSION is the apiVersion (similar to K8s) used by our app specific files.
 	API_VERSION = "cli.konveyor.io/v1alpha1"
 	// KIND is the kind (similar to K8s) used by our app's local cache.
