@@ -35,12 +35,12 @@ import (
 func Download(url string, outputPath string, checkSum string) error {
 	out, err := os.Create(outputPath)
 	if err != nil {
-		return fmt.Errorf("failed to create the output file at path %s . Error: %q", outputPath, err)
+		return fmt.Errorf("failed to create the output file at path %s . Error: %w", outputPath, err)
 	}
 	defer out.Close()
 	resp, err := http.Get(url)
 	if err != nil {
-		return fmt.Errorf("failed to GET the url %s . Error: %q", url, err)
+		return fmt.Errorf("failed to GET the url %s . Error: %w", url, err)
 	}
 	defer resp.Body.Close()
 	bar := progressbar.DefaultBytes(
@@ -54,7 +54,7 @@ func Download(url string, outputPath string, checkSum string) error {
 	}
 	n, err := io.Copy(io.MultiWriter(writers...), resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to GET the url %s . Error: %q", url, err)
+		return fmt.Errorf("failed to GET the url %s . Error: %w", url, err)
 	}
 	logrus.Infof("Downloaded a file of size %d bytes from the url %s and saved it to %s", n, url, outputPath)
 	if checkSum != "" {
@@ -73,12 +73,12 @@ func ExtractTarGz(path string) error {
 	archiveDir := filepath.Dir(path)
 	gzippedArchive, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("failed to open the archive at path %s . Error: %q", path, err)
+		return fmt.Errorf("failed to open the archive at path %s . Error: %w", path, err)
 	}
 	defer gzippedArchive.Close()
 	archive, err := gzip.NewReader(gzippedArchive)
 	if err != nil {
-		return fmt.Errorf("failed to decompress the archive at path %s using gzip. Error: %q", path, err)
+		return fmt.Errorf("failed to decompress the archive at path %s using gzip. Error: %w", path, err)
 	}
 	tarReader := tar.NewReader(archive)
 	for {
@@ -87,23 +87,23 @@ func ExtractTarGz(path string) error {
 			break
 		}
 		if err != nil {
-			return fmt.Errorf("failed to parse the tar archive. Error: %q", err)
+			return fmt.Errorf("failed to parse the tar archive. Error: %w", err)
 		}
 		switch header.Typeflag {
 		case tar.TypeDir:
 			dirPath := filepath.Join(archiveDir, header.Name)
 			if err := os.Mkdir(dirPath, header.FileInfo().Mode()); err != nil {
-				return fmt.Errorf("failed to make the directory %s . Error: %q", dirPath, err)
+				return fmt.Errorf("failed to make the directory %s . Error: %w", dirPath, err)
 			}
 		case tar.TypeReg:
 			filePath := filepath.Join(archiveDir, header.Name)
 			outFile, err := os.OpenFile(filePath, os.O_CREATE|os.O_WRONLY, header.FileInfo().Mode())
 			if err != nil {
-				return fmt.Errorf("failed to create the file at path %s . Error: %q", filePath, err)
+				return fmt.Errorf("failed to create the file at path %s . Error: %w", filePath, err)
 			}
 			defer outFile.Close()
 			if _, err := io.Copy(outFile, tarReader); err != nil {
-				return fmt.Errorf("failed to write to the file at path %s . Error: %q", filePath, err)
+				return fmt.Errorf("failed to write to the file at path %s . Error: %w", filePath, err)
 			}
 		case tar.TypeSymlink:
 			logrus.Warnf("found a symbolic link in the tar archive. Skipping.")

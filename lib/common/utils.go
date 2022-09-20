@@ -64,7 +64,7 @@ func Contains[T comparable](t T, ts []T) bool {
 func GetStorageDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		logrus.Warnf("Failed to get the user's home directory. Error: %q", err)
+		logrus.Warnf("Failed to get the user's home directory. Error: %w", err)
 		return types.STORAGE_DIR
 	}
 	if home == "" {
@@ -73,6 +73,21 @@ func GetStorageDir() string {
 	return filepath.Join(home, types.STORAGE_DIR)
 }
 
+// GetPluginDir returns the path to the plugins directory.
 func GetPluginDir(name string) string {
 	return filepath.Join(GetStorageDir(), types.PLUGINS_DIR, name)
+}
+
+// GetPlatformAsSingleString returns the Os and Arch as a single string.
+func GetPlatformAsSingleString(os, arch string) string {
+	return os + "-" + arch
+}
+
+// Keys returns the keys of a map.
+func Keys[K comparable, V interface{}](m map[K]V) []K {
+	ks := []K{}
+	for k := range m {
+		ks = append(ks, k)
+	}
+	return ks
 }

@@ -59,7 +59,7 @@ func Execute() error {
 	// Look in the local cache.
 	localCache, err := cache.GetLocalCache()
 	if err != nil {
-		return fmt.Errorf("failed to get the local cache. Error: %q", err)
+		return fmt.Errorf("failed to get the local cache. Error: %w", err)
 	}
 	pluginPath := ""
 	if len(localCache.Spec.Installed) > 0 {
@@ -73,7 +73,7 @@ func Execute() error {
 	if pluginPath == "" {
 		pluginPaths, err := plugin.GetPluginsListFromPath(false)
 		if err != nil {
-			return fmt.Errorf("failed to get the list of plugins from the PATH. Error: %q", err)
+			return fmt.Errorf("failed to get the list of plugins from the PATH. Error: %w", err)
 		}
 		idx := common.FindIndex(func(p string) bool { return filepath.Base(p) == types.VALID_PLUGIN_FILENAME_PREFIX+cmdName }, pluginPaths)
 		if idx != -1 {
@@ -88,7 +88,7 @@ func Execute() error {
 
 	logrus.Infof("Executing the plugin '%s' with the args: %+v", pluginPath, rest)
 	if err := ExecutePlugin(pluginPath, rest, os.Environ()); err != nil {
-		return fmt.Errorf("the plugin failed to run or did not exit properly. Error: %q", err)
+		return fmt.Errorf("the plugin failed to run or did not exit properly. Error: %w", err)
 	}
 	return nil
 }

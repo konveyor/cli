@@ -36,7 +36,7 @@ Try "konveyor plugin --help" for more info about plugins and their installation.
 		PersistentPreRunE: func(*cobra.Command, []string) error {
 			logl, err := logrus.ParseLevel(loglevel)
 			if err != nil {
-				logrus.Errorf("the log level '%s' is invalid, using 'info' log level instead. Error: %q", loglevel, err)
+				logrus.Errorf("the log level '%s' is invalid, using 'info' log level instead. Error: %w", loglevel, err)
 				logl = logrus.InfoLevel
 			}
 			logrus.SetLevel(logl)

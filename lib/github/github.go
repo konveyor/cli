@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/google/go-github/v47/github"
+	"github.com/konveyor/cli/lib/types"
 	"github.com/sirupsen/logrus"
 )
 
@@ -48,7 +49,7 @@ func GetPluginsListFromGithub() ([]string, error) {
 		&github.RepositoryContentGetOptions{Ref: REPO_BRANCH},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list the contents of the plugins folder on the Github repo. Error: %q", err)
+		return nil, fmt.Errorf("failed to list the contents of the plugins folder on the Github repo. Error: %w", err)
 	}
 	logrus.Debugf("resp: %#v", resp)
 	pluginNames := []string{}
@@ -85,7 +86,10 @@ func GetFileFromGithub(path string) ([]byte, error) {
 		&github.RepositoryContentGetOptions{Ref: REPO_BRANCH},
 	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list the contents of the plugins folder on the Github repo. Error: %q", err)
+		return nil, &types.RequestError{
+			StatusCode: resp.StatusCode,
+			Err:        fmt.Errorf("failed to list the contents of the plugins folder on the Github repo. Error: %w", err),
+		}
 	}
 	logrus.Debugf("resp: %#v", resp)
 	if fileContent == nil {
@@ -93,7 +97,6 @@ func GetFileFromGithub(path string) ([]byte, error) {
 	}
 	if fileContent.Content == nil {
 		return nil, fmt.Errorf("the file content is nil")
-
 	}
 	contentb64 := *fileContent.Content
 	if contentb64 == "" {
@@ -102,7 +105,7 @@ func GetFileFromGithub(path string) ([]byte, error) {
 	logrus.Debugf("contentb64: %s", contentb64)
 	content, err := base64.StdEncoding.DecodeString(contentb64)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode the file contents as base64. Error: %q", err)
+		return nil, fmt.Errorf("failed to decode the file contents as base64. Error: %w", err)
 	}
 	return content, nil
 }

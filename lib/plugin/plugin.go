@@ -25,8 +25,10 @@ import (
 
 	"github.com/konveyor/cli/lib/cache"
 	"github.com/konveyor/cli/lib/common"
+	"github.com/konveyor/cli/lib/github"
 	"github.com/konveyor/cli/lib/types"
 	"github.com/sirupsen/logrus"
+	"gopkg.in/yaml.v3"
 )
 
 func isExecutable(mode os.FileMode) bool { return mode&0111 != 0 }
@@ -41,7 +43,7 @@ func getUniquePaths(paths []string) []string {
 	for _, filteredPath := range filteredPaths {
 		realPath, err := filepath.EvalSymlinks(filteredPath)
 		if err != nil {
-			logrus.Debugf("failed to resolve the path %s . Error: %q", filteredPath, err)
+			logrus.Debugf("failed to resolve the path %s . Error: %w", filteredPath, err)
 			continue
 		}
 		realPaths = append(realPaths, realPath)
@@ -75,7 +77,7 @@ func GetPluginsList(nameOnly bool) ([]string, error) {
 func GetPluginsListFromLocalCache(nameOnly bool) ([]string, error) {
 	localCache, err := cache.GetLocalCache()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the local cache. Error: %q", err)
+		return nil, fmt.Errorf("failed to get the local cache. Error: %w", err)
 	}
 	if len(localCache.Spec.Installed) == 0 {
 		return nil, nil
@@ -111,7 +113,7 @@ func GetPluginsListFromPath(nameOnly bool) ([]string, error) {
 	for _, dir := range getUniquePaths(paths) {
 		files, err := ioutil.ReadDir(dir)
 		if err != nil {
-			logrus.Errorf("failed to read the directory %s . Error: %q . Skipping...\n", dir, err)
+			logrus.Errorf("failed to read the directory %s . Error: %w . Skipping...\n", dir, err)
 			continue
 		}
 
@@ -141,4 +143,45 @@ func GetPluginsListFromPath(nameOnly bool) ([]string, error) {
 		}
 	}
 	return pluginPaths, nil
+}
+
+// GetPluginMetadataFromLocalCache returns the plugin metadata from the storage directory.
+func GetPluginMetadataFromLocalCache(name string) (types.PluginMetadata, error) {
+	pluginDir := common.GetPluginDir(name)
+	pluginYamlPath := filepath.Join(pluginDir, name+".yaml")
+	plugin := types.PluginMetadata{}
+	pluginYaml, err := ioutil.ReadFile(pluginYamlPath)
+	if err != nil {
+		return plugin, fmt.Errorf("failed to get the yaml for the plugin '%s' from the local cache. Error: %w", plugin, err)
+	}
+	if err := yaml.Unmarshal(pluginYaml, &plugin); err != nil {
+		return plugin, fmt.Errorf("failed to parse the yaml for the plugin '%s'. Error: %w", plugin, err)
+	}
+	return plugin, nil
+}
+
+// GetPluginMetadataFromGithub returns the plugin metadata from the Github repo.
+func GetPluginMetadataFromGithub(name string) (types.PluginMetadata, error) {
+	plugin := types.PluginMetadata{}
+	pluginYaml, err := github.GetPluginYamlFromGithub(name)
+	if err != nil {
+		return plugin, fmt.Errorf("failed to get the yaml for the plugin '%s' from the Github repo. Error: %w", plugin, err)
+	}
+	if err := yaml.Unmarshal(pluginYaml, &plugin); err != nil {
+		return plugin, fmt.Errorf("failed to parse the yaml for the plugin '%s'. Error: %w", plugin, err)
+	}
+	return plugin, nil
+}
+
+func GetPluginFromLocalCache(name string) (types.InstalledPlugin, error) {
+	plugin := types.InstalledPlugin{}
+	localCache, err := cache.GetLocalCache()
+	if err != nil {
+		return plugin, fmt.Errorf("failed to get the local cache. Error: %w", err)
+	}
+	idx := common.FindIndex(func(p types.InstalledPlugin) bool { return p.Name == name }, localCache.Spec.Installed)
+	if idx == -1 {
+		return plugin, types.ErrPluginNotInstalled
+	}
+	return localCache.Spec.Installed[idx], nil
 }

@@ -17,6 +17,8 @@
 package cmd
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/konveyor/cli/lib/common"
@@ -34,14 +36,15 @@ func GetPluginCommand() *cobra.Command {
 		Short: "Provides utilities for interacting with plugins.",
 		Long: `Provides utilities for interacting with plugins.
 
-	Plugins provide extended functionality that is not part of the major command-line distribution.
-	Please refer to the documentation and examples for more information about how write your own plugins.
+    Plugins provide extended functionality that is not part of the major command-line distribution.
+    Please refer to the documentation and examples for more information about how write your own plugins.
 `,
 	}
 	pluginCmd.AddCommand(GetPluginListSubCommand())
 	pluginCmd.AddCommand(GetPluginInstallCommand())
 	pluginCmd.AddCommand(GetPluginUninstallCommand())
 	pluginCmd.AddCommand(GetPluginTidyCommand())
+	pluginCmd.AddCommand(GetPluginInfoCommand())
 	return pluginCmd
 }
 
@@ -54,11 +57,15 @@ func GetPluginListSubCommand() *cobra.Command {
 		Short: "List all the installed plugins.",
 		Long: `List all the installed plugins.
 
-	Installed plugins are those that are: - executable - anywhere on the user's PATH - begin with "` + types.VALID_PLUGIN_FILENAME_PREFIX + `"
-	Also includes any plugins in the ` + common.GetStorageDir() + ` directory
+    Installed plugins are those that are: - executable - anywhere on the user's PATH - begin with "` + types.VALID_PLUGIN_FILENAME_PREFIX + `"
+    Also includes any plugins in the ` + common.GetStorageDir() + ` directory
 `,
 		Run: func(*cobra.Command, []string) {
-			logrus.Debug("command plugin list called")
+			if remote {
+				logrus.Infof("Fetching the list of plugins from Github.")
+			} else {
+				logrus.Infof("Looking for installed plugins.")
+			}
 			if remote {
 				plugins, err := github.GetPluginsListFromGithub()
 				if err != nil {
@@ -92,8 +99,11 @@ func GetPluginInstallCommand() *cobra.Command {
 		Long:  "Install a plugin",
 		Run: func(_ *cobra.Command, args []string) {
 			name := args[0]
-			logrus.Infof("Looking for a plugin named '%s' on Github", name)
+			logrus.Infof("Looking for a plugin named '%s' on Github.", name)
 			if err := plugin.InstallPluginFromGithub(name); err != nil {
+				if errors.Is(err, types.ErrPluginAlreadyInstalled) {
+					logrus.Fatal(err)
+				}
 				logrus.Fatalf("failed to find or install the plugin named '%s'. Error: %q", name, err)
 			}
 			logrus.Infof("The plugin named '%s' was installed!", name)
@@ -111,7 +121,7 @@ func GetPluginUninstallCommand() *cobra.Command {
 		Long:  "Uninstall a plugin",
 		Run: func(_ *cobra.Command, args []string) {
 			name := args[0]
-			logrus.Infof("Looking for a plugin named '%s' among the installed plugins", name)
+			logrus.Infof("Looking for a plugin named '%s' among the installed plugins.", name)
 			if err := plugin.UninstallPlugin(name); err != nil {
 				logrus.Fatalf("failed to find or uninstall the plugin named '%s'. Error: %q", name, err)
 			}
@@ -129,7 +139,7 @@ func GetPluginTidyCommand() *cobra.Command {
 		Short: "Cleans the plugins directory, removing any broken plugins to ensure consistency with the local cache",
 		Long:  "Cleans the plugins directory, removing any broken plugins to ensure consistency with the local cache",
 		Run: func(*cobra.Command, []string) {
-			logrus.Infof("Looking for any inconsistencies between the local cache and the installed plugins")
+			logrus.Infof("Looking for any inconsistencies between the local cache and the installed plugins.")
 			if err := plugin.UninstallBrokenPlugins(); err != nil {
 				logrus.Fatalf("failed to uninstall all the broken plugins. Error: %q", err)
 			}
@@ -137,4 +147,26 @@ func GetPluginTidyCommand() *cobra.Command {
 		},
 	}
 	return pluginTidyCmd
+}
+
+// GetPluginInfoCommand returns a command to display info about a plugin.
+func GetPluginInfoCommand() *cobra.Command {
+	pluginInfoCmd := &cobra.Command{
+		Use:   "info",
+		Args:  cobra.MinimumNArgs(1),
+		Short: "Displays info about a plugin - available versions, links to homepage, documentation, etc.",
+		Long:  "Displays info about a plugin - available versions, links to homepage, documentation, etc.",
+		Run: func(_ *cobra.Command, args []string) {
+			logrus.Debugf("plugin info called")
+			name := args[0]
+			logrus.Infof("Looking for information on a plugin named '%s'", name)
+			info, err := plugin.GetPluginInfo(name)
+			if err != nil {
+				logrus.Fatalf("failed to find a plugin named '%s'. Error: %q", name, err)
+			}
+			logrus.Infof("Found the following information about the '%s' plugin:", name)
+			fmt.Println(info)
+		},
+	}
+	return pluginInfoCmd
 }
