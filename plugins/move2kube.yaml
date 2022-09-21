@@ -8,7 +8,9 @@ spec:
   tutorials: https://move2kube.konveyor.io/tutorials
   shortDescription: Move2Kube creates all the resources required for deploying your application to Kubernetes.
   description: |
-    Move2Kube creates all resources required for deploying your application to Kubernetes, including containerisation and kubernetes resources.
+    Move2Kube creates all the resources required for deploying your application to Kubernetes.
+    It supports translating from docker swarm/docker-compose, cloud foundry apps and even other non-containerized applications.
+    Even if the app does not use any of the above, or even if it is not containerized it can still be transformed.
   versions:
     - version: v0.3.4
       platforms:

@@ -31,7 +31,7 @@ type MetadataInfo struct {
 
 // PluginMetadataSpec stores the specification of the plugin metadata.
 type PluginMetadataSpec struct {
-	Homepage         string                  `yaml:"homePage"`
+	HomePage         string                  `yaml:"homePage"`
 	Docs             string                  `yaml:"docs"`
 	Tutorials        string                  `yaml:"tutorials"`
 	ShortDescription string                  `yaml:"shortDescription"`

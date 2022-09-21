@@ -123,10 +123,10 @@ func createArchives(distDirs []string) {
 	extraFilesDir := filepath.Join("files", "*")
 	extraFiles, err := filepath.Glob(extraFilesDir)
 	if err != nil {
-		logrus.Fatalf("Failed to get the files in the directory at path %q Error %q", extraFilesDir, err)
+		logrus.Fatalf("Failed to get the files in the directory at path %s . Error %q", extraFilesDir, err)
 	}
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
-		logrus.Fatalf("Failed to make the output directory at path %s Error: %q", outputDir, err)
+		logrus.Fatalf("Failed to make the output directory at path %s . Error: %q", outputDir, err)
 	}
 	logrus.Debugf("Generating output in directory at path %s", outputDir)
 
@@ -136,16 +136,16 @@ func createArchives(distDirs []string) {
 	for _, distDir := range distDirs {
 		logrus.Debug("Remove and remake the temporary directory.")
 		if err := os.RemoveAll(tempDir); err != nil {
-			logrus.Fatalf("Failed to remove the temporary directory at path %q Error: %q", tempDir, err)
+			logrus.Fatalf("Failed to remove the temporary directory at path %s . Error: %q", tempDir, err)
 		}
 		if err := os.Mkdir(tempDir, 0755); err != nil {
-			logrus.Fatalf("Failed to make the temporary directory at path %q Error: %q", tempDir, err)
+			logrus.Fatalf("Failed to make the temporary directory at path %s . Error: %q", tempDir, err)
 		}
 
 		logrus.Debug("Copy the files over.")
 		buildArtifacts, err := filepath.Glob(filepath.Join(distDir, "*"))
 		if err != nil {
-			logrus.Fatalf("Failed to get the files in the build directory at path %q Error %q", distDir, err)
+			logrus.Fatalf("Failed to get the files in the build directory at path %s . Error %q", distDir, err)
 		}
 		logrus.Debug("buildArtifacts:", buildArtifacts)
 		if err := copy(buildArtifacts, tempDir); err != nil {
@@ -182,7 +182,7 @@ func createArchives(distDirs []string) {
 
 	logrus.Debug("Cleanup the temporary directory.")
 	if err := os.RemoveAll(tempDir); err != nil {
-		logrus.Warnf("Failed to remove the temporary directory at path %q Error: %q", tempDir, err)
+		logrus.Warnf("Failed to remove the temporary directory at path %q Error: %w", tempDir, err)
 	}
 }
 

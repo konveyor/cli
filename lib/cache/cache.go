@@ -43,10 +43,10 @@ func GetLocalCache() (types.LocalCache, error) {
 			logrus.Infof("The local cache doesn't exist. Creating it...")
 			return cache, SaveLocalCache(cache)
 		}
-		return cache, fmt.Errorf("failed to read the local cache file at path %s . Error: %q", cachePath, err)
+		return cache, fmt.Errorf("failed to read the local cache file at path %s . Error: %w", cachePath, err)
 	}
 	if err := yaml.Unmarshal(cacheBytes, &cache); err != nil {
-		return cache, fmt.Errorf("failed to unmarshal the local cache from yaml. Error: %q", err)
+		return cache, fmt.Errorf("failed to unmarshal the local cache from yaml. Error: %w", err)
 	}
 	return cache, nil
 }
@@ -55,15 +55,15 @@ func GetLocalCache() (types.LocalCache, error) {
 func SaveLocalCache(cache types.LocalCache) error {
 	storageDir := common.GetStorageDir()
 	if err := os.MkdirAll(storageDir, types.DEFAULT_DIRECTORY_PERMISSIONS); err != nil {
-		return fmt.Errorf("failed to create the storage directory %s . Error: %q", storageDir, err)
+		return fmt.Errorf("failed to create the storage directory %s . Error: %w", storageDir, err)
 	}
 	cachePath := filepath.Join(storageDir, types.CACHE_FILE)
 	cacheYaml, err := yaml.Marshal(cache)
 	if err != nil {
-		return fmt.Errorf("failed to marshal the local cache to yaml. Error: %q", err)
+		return fmt.Errorf("failed to marshal the local cache to yaml. Error: %w", err)
 	}
 	if err := ioutil.WriteFile(cachePath, cacheYaml, types.DEFAULT_FILE_PERMISSIONS); err != nil {
-		return fmt.Errorf("failed to write the local cache to a file at path %s . Error: %q", cachePath, err)
+		return fmt.Errorf("failed to write the local cache to a file at path %s . Error: %w", cachePath, err)
 	}
 	return nil
 }
