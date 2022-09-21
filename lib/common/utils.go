@@ -64,7 +64,7 @@ func Contains[T comparable](t T, ts []T) bool {
 func GetStorageDir() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
-		logrus.Warnf("Failed to get the user's home directory. Error: %w", err)
+		logrus.Warnf("Failed to get the user's home directory. Error: %q", err)
 		return types.STORAGE_DIR
 	}
 	if home == "" {

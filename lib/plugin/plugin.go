@@ -43,7 +43,7 @@ func getUniquePaths(paths []string) []string {
 	for _, filteredPath := range filteredPaths {
 		realPath, err := filepath.EvalSymlinks(filteredPath)
 		if err != nil {
-			logrus.Debugf("failed to resolve the path %s . Error: %w", filteredPath, err)
+			logrus.Debugf("failed to resolve the path %s . Error: %q", filteredPath, err)
 			continue
 		}
 		realPaths = append(realPaths, realPath)
@@ -113,7 +113,7 @@ func GetPluginsListFromPath(nameOnly bool) ([]string, error) {
 	for _, dir := range getUniquePaths(paths) {
 		files, err := ioutil.ReadDir(dir)
 		if err != nil {
-			logrus.Errorf("failed to read the directory %s . Error: %w . Skipping...\n", dir, err)
+			logrus.Errorf("failed to read the directory %s . Error: %q . Skipping...\n", dir, err)
 			continue
 		}
 

@@ -48,12 +48,12 @@ func getAllSupportedPlatforms(pluginMeta types.PluginMetadata) []string {
 	return common.Keys(uniquePlatforms)
 }
 
+// GetPluginInfo returns some information about the plugin in a human readable format.
 func GetPluginInfo(name string) (string, error) {
 	// get plugin metadata
-	pluginMeta := types.PluginMetadata{}
 	pluginMeta, err := GetPluginMetadataFromLocalCache(name)
 	if err != nil {
-		logrus.Debugf("failed to get the plugin metadata from the local cache. Error: %w", err)
+		logrus.Debugf("failed to get the plugin metadata from the local cache. Error: %q", err)
 		pluginMeta, err = GetPluginMetadataFromGithub(name)
 		if err != nil {
 			if types.IsNotFoundError(err) {

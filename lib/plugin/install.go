@@ -130,7 +130,7 @@ func UninstallBrokenPlugins() error {
 		fPath := filepath.Join(pluginsDir, f.Name())
 		if !f.IsDir() {
 			if err := os.RemoveAll(fPath); err != nil {
-				logrus.Errorf("failed to remove the extraneous file in the plugins directory at path %s . Error: %w", fPath, err)
+				logrus.Errorf("failed to remove the extraneous file in the plugins directory at path %s . Error: %q", fPath, err)
 			}
 			continue
 		}
@@ -138,7 +138,7 @@ func UninstallBrokenPlugins() error {
 		if idx == -1 {
 			logrus.Infof("Found a broken plugin at %s . Removing...", fPath)
 			if err := os.RemoveAll(fPath); err != nil {
-				logrus.Errorf("failed to remove the broken plugin in the plugins directory at path %s . Error: %w", fPath, err)
+				logrus.Errorf("failed to remove the broken plugin in the plugins directory at path %s . Error: %q", fPath, err)
 			}
 		}
 	}
